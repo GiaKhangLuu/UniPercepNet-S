@@ -12,7 +12,7 @@ from mmdet.utils import ConfigType, OptConfigType, OptMultiConfig
 from mmdet.models import BaseDetector
 
 @MODELS.register_module()
-class UniPercepNet(BaseDetector):
+class UniPercepNetV2(BaseDetector):
     """Base class for two-stage detectors.
 
     Two-stage detectors typically consisting of a region proposal network and a
