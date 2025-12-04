@@ -209,23 +209,6 @@ class RegNet(ResNet):
             else:
                 stage_plugins = None
 
-            #if self.se_on:
-            #    res_layer = self.make_res_layer(
-            #        block=self.block,
-            #        inplanes=self.inplanes,
-            #        planes=self.stage_widths[i],
-            #        num_blocks=num_blocks,
-            #        stride=stride,
-            #        dilation=dilation,
-            #        style=self.style,
-            #        avg_down=self.avg_down,
-            #        with_cp=self.with_cp,
-            #        conv_cfg=self.conv_cfg,
-            #        norm_cfg=self.norm_cfg,
-            #        dcn=dcn,
-            #        plugins=stage_plugins,
-            #        init_cfg=block_init_cfg)
-            #else:
             res_layer = self.make_res_layer(
                 block=self.block,
                 inplanes=self.inplanes,

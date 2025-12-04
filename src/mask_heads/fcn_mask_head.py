@@ -149,7 +149,7 @@ class FCNMaskHead(BaseModule):
         """
         for conv in self.convs:
             x = conv(x)
-        if self.sam is not None:
+        if self.sam_on and self.sam is not None:
             x = self.sam(x)
         if self.upsample is not None:
             x = self.upsample(x)
