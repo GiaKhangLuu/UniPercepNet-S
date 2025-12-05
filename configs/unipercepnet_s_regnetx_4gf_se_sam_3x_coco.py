@@ -7,8 +7,8 @@ _base_ = [
 import os
 import sys
 
-HOME_DIR = os.environ['HOME']
-sys.path.append(os.path.join(HOME_DIR, 'dev/YOLOF-MaskV2-mmcv'))
+UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
+sys.path.append(UNIPERCEPNET_DIR)
 
 custom_imports = dict(
     imports=['src'],
