@@ -1,11 +1,10 @@
 base_epoch = 12
-interval_of_base_epoch = 3
+interval_of_base_epoch = 1
 max_epochs= int(base_epoch * interval_of_base_epoch)
-stage2_num_epochs = 24
 
 _base_ = [
     './_base_/datasets/coco_instance.py',
-    './_base_/schedules/schedule_3x.py', 
+    './_base_/schedules/schedule_1x.py', 
     './_base_/default_runtime.py',
 ]
 
@@ -159,35 +158,8 @@ train_pipeline = [
         with_bbox=True,
         with_mask=True,
         poly2mask=False),
-    dict(type='CachedMosaic', img_scale=(640, 640), pad_val=114.0),
-    dict(
-        type='RandomResize',
-        scale=(1280, 1280),
-        ratio_range=(0.5, 2.0),
-        keep_ratio=True),
-    dict(
-        type='RandomCrop',
-        crop_size=img_scale,
-        recompute_bbox=True,
-        allow_negative_crop=True),
-    dict(type='YOLOXHSVRandomAug'),
-    dict(type='RandomFlip', prob=0.5),
-    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
-    dict(type='FilterAnnotations', min_gt_bbox_wh=(1, 1)),
-    dict(type='PackDetInputs')
-]
-
-train_pipeline_stage2 = [
-    dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
-    dict(
-        type='LoadAnnotations',
-        with_bbox=True,
-        with_mask=True,
-        poly2mask=False),
     dict(type='Resize', scale=img_scale, keep_ratio=True),
-    dict(type='YOLOXHSVRandomAug'),
     dict(type='RandomFlip', prob=0.5),
-    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
     dict(type='FilterAnnotations', min_gt_bbox_wh=(1, 1)),
     dict(type='PackDetInputs')
 ]
@@ -195,7 +167,6 @@ train_pipeline_stage2 = [
 test_pipeline = [
     dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
     dict(type='Resize', scale=img_scale, keep_ratio=True),
-    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
     dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
     dict(
         type='PackDetInputs',
@@ -215,7 +186,7 @@ val_dataloader = dict(
 
 train_cfg = dict(max_epochs=max_epochs)
 
-lr = 1e-4
+lr = 5e-7
 optim_wrapper = dict(
     _delete_=True,
     type='OptimWrapper',
@@ -231,9 +202,21 @@ custom_hooks = [
         ema_type='ExpMomentumEMA',
         momentum=0.0002,
         update_buffers=True,
-        priority=49),
+        priority=49)
+]
+
+load_from = "/home/huflit/khanglg/YOLOF-MaskV2-mmcv/work_dirs/unipercepnet_s_regnetx_4gf_se_sam_3x_coco/epoch_36.pth"
+
+param_scheduler = [
     dict(
-        type='PipelineSwitchHook',
-        switch_epoch=max_epochs - stage2_num_epochs,
-        switch_pipeline=train_pipeline_stage2)
+        type='LinearLR', start_factor=0.01, by_epoch=False, begin=0, end=250),
+    dict(
+        # use cosine lr from 150 to 300 epoch
+        type='CosineAnnealingLR',
+        eta_min=lr * 0.05,
+        begin=3,
+        end=max_epochs,
+        T_max=max_epochs - 3,
+        by_epoch=True,
+        convert_to_iter_based=True),
 ]

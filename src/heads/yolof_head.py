@@ -82,6 +82,7 @@ class YOLOFHead(AnchorHead):
             kernel_size=3,
             stride=1,
             padding=1)
+        self.tanh = nn.Tanh()
 
     def init_weights(self) -> None:
         for m in self.modules():
