@@ -15,8 +15,8 @@ import sys
 UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
 sys.path.append(UNIPERCEPNET_DIR)
 
-TRAIN_BATCH_SIZE = 6
-VAL_BATCH_SIZE = 6
+TRAIN_BATCH_SIZE = 4
+VAL_BATCH_SIZE = 4
 
 img_scale = (1333, 800)
 
@@ -35,19 +35,19 @@ model = dict(
         pad_size_divisor=32,
         batch_augments=None),
     backbone=dict(
-        type='src.ResNet',
-        depth=50,
-        num_stages=4,
+        type='src.RegNet',
+        arch='regnetx_12gf',
         out_indices=(3,),
         frozen_stages=-1,
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
         se_on=True,
-        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
+        init_cfg=dict(
+            type='Pretrained', checkpoint='open-mmlab://regnetx_12gf')),
     neck=dict(
         type='DilatedEncoder',
-        in_channels=2048,
+        in_channels=1360,
         out_channels=512,
         block_mid_channels=128,
         num_residual_blocks=4,
@@ -212,6 +212,8 @@ val_dataloader = dict(
     batch_size=VAL_BATCH_SIZE,
     dataset=dict(pipeline=test_pipeline)
 )
+
+test_dataloader = val_dataloader
 
 train_cfg = dict(max_epochs=max_epochs)
 

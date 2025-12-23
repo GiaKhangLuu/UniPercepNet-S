@@ -35,19 +35,19 @@ model = dict(
         pad_size_divisor=32,
         batch_augments=None),
     backbone=dict(
-        type='src.ResNet',
-        depth=50,
-        num_stages=4,
+        type='src.RegNet',
+        arch='regnetx_4.0gf',
         out_indices=(3,),
         frozen_stages=-1,
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
-        se_on=True,
-        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
+        se_on=False,
+        init_cfg=dict(
+            type='Pretrained', checkpoint='open-mmlab://regnetx_4.0gf')),
     neck=dict(
         type='DilatedEncoder',
-        in_channels=2048,
+        in_channels=1360,
         out_channels=512,
         block_mid_channels=128,
         num_residual_blocks=4,
@@ -213,6 +213,8 @@ val_dataloader = dict(
     dataset=dict(pipeline=test_pipeline)
 )
 
+test_dataloader = val_dataloader
+
 train_cfg = dict(max_epochs=max_epochs)
 
 lr = 1e-4
@@ -236,17 +238,4 @@ custom_hooks = [
         type='PipelineSwitchHook',
         switch_epoch=max_epochs - stage2_num_epochs,
         switch_pipeline=train_pipeline_stage2)
-]
-
-param_scheduler = [
-    dict(
-        type='LinearLR', start_factor=0.001, by_epoch=False, begin=0, end=500),
-    dict(
-        type='CosineAnnealingLR',
-        eta_min=lr * 1e-2,
-        begin=20,
-        end=max_epochs,
-        T_max=max_epochs - 20,
-        by_epoch=True,
-        convert_to_iter_based=True),
 ]
