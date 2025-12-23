@@ -15,7 +15,7 @@ import sys
 UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
 sys.path.append(UNIPERCEPNET_DIR)
 
-TRAIN_BATCH_SIZE = 4
+TRAIN_BATCH_SIZE = 1
 VAL_BATCH_SIZE = 4
 
 img_scale = (1333, 800)
@@ -47,7 +47,7 @@ model = dict(
             type='Pretrained', checkpoint='open-mmlab://regnetx_12gf')),
     neck=dict(
         type='DilatedEncoder',
-        in_channels=1360,
+        in_channels=2240,
         out_channels=512,
         block_mid_channels=128,
         num_residual_blocks=4,
