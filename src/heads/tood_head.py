@@ -323,8 +323,7 @@ class TOODHead(YOLOFHead):
             loss_bbox = bbox_pred.sum() * 0
             pos_bbox_weight = bbox_targets.new_tensor(0.)
 
-        return loss_cls, loss_bbox, alignment_metrics.sum(
-        ), pos_bbox_weight.sum()
+        return loss_cls, loss_bbox, alignment_metrics.sum(), pos_bbox_weight.sum()
 
     def loss_by_feat(
             self,

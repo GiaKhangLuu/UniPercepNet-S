@@ -223,7 +223,7 @@ lr = 1e-4
 optim_wrapper = dict(
     _delete_=True,
     type='OptimWrapper',
-    clip_grad=dict(max_norm=35, norm_type=2),
+    clip_grad=dict(max_norm=1.0, norm_type=2),
     optimizer=dict(lr=lr, type='AdamW', weight_decay=0.05))
 
 default_hooks = dict(
