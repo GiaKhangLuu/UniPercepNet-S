@@ -16,7 +16,7 @@ UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
 sys.path.append(UNIPERCEPNET_DIR)
 
 TRAIN_BATCH_SIZE = 6
-VAL_BATCH_SIZE = 6
+VAL_BATCH_SIZE = 1
 
 img_scale = (1333, 800)
 
@@ -35,19 +35,19 @@ model = dict(
         pad_size_divisor=32,
         batch_augments=None),
     backbone=dict(
-        type='src.RegNet',
-        arch='regnetx_4.0gf',
+        type='src.ResNet',
+        depth=101,
+        num_stages=4,
         out_indices=(3,),
         frozen_stages=-1,
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
         se_on=True,
-        init_cfg=dict(
-            type='Pretrained', checkpoint='open-mmlab://regnetx_4.0gf')),
+        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     neck=dict(
         type='DilatedEncoder',
-        in_channels=1360,
+        in_channels=2048,
         out_channels=512,
         block_mid_channels=128,
         num_residual_blocks=4,
@@ -97,7 +97,7 @@ model = dict(
             in_channels=512,
             conv_out_channels=256,
             num_classes=80,
-            sam_on=True,
+            sam_on=False,
             upsample_cfg=dict(
                 type='deconv', scale_factor=2),
             loss_mask=dict(
@@ -105,8 +105,7 @@ model = dict(
     train_cfg=dict(
         bbox_head=dict(
             initial_epoch=4,
-            initial_assigner=dict(
-                type='UniformAssigner', pos_ignore_thr=0.15, neg_ignore_thr=0.7),
+            initial_assigner=dict(type='ATSSAssigner', topk=9),
             assigner=dict(type='TaskAlignedAssigner', topk=13),
             sampler=dict(
                 type='RandomSampler',
@@ -211,7 +210,6 @@ train_dataloader = dict(
 )
 val_dataloader = dict(
     batch_size=VAL_BATCH_SIZE,
-    num_workers=10,
     dataset=dict(pipeline=test_pipeline)
 )
 

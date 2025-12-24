@@ -16,7 +16,7 @@ UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
 sys.path.append(UNIPERCEPNET_DIR)
 
 TRAIN_BATCH_SIZE = 6
-VAL_BATCH_SIZE = 6
+VAL_BATCH_SIZE = 1
 
 img_scale = (1333, 800)
 
@@ -212,6 +212,8 @@ val_dataloader = dict(
     batch_size=VAL_BATCH_SIZE,
     dataset=dict(pipeline=test_pipeline)
 )
+
+test_dataloader = val_dataloader
 
 train_cfg = dict(max_epochs=max_epochs)
 

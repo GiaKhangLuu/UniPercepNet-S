@@ -25,7 +25,7 @@ from mmdet.models.dense_heads.anchor_head import AnchorHead
 
 from .yolof_head import YOLOFHead
 
-class TOODHead(ATSSHead):
+class TOODHead(YOLOFHead):
     """TOODHead used in `TOOD: Task-aligned One-stage Object Detection.
 
     <https://arxiv.org/abs/2108.07755>`_.
@@ -312,10 +312,7 @@ class TOODHead(ATSSHead):
             pos_decode_bbox_targets = pos_bbox_targets / stride[0]
 
             # regression loss
-            pos_bbox_weight = self.centerness_target(
-                pos_anchors, pos_bbox_targets
-            ) if self.epoch < self.initial_epoch else alignment_metrics[
-                pos_inds]
+            pos_bbox_weight = alignment_metrics[pos_inds]
 
             loss_bbox = self.loss_bbox(
                 pos_decode_bbox_pred,
@@ -576,25 +573,25 @@ class TOODHead(ATSSHead):
         self.epoch = message_hub.get_info('epoch')
 
         if self.epoch < self.initial_epoch:
-            (all_anchors, all_labels, all_label_weights, all_bbox_targets,
-             all_bbox_weights, pos_inds_list, neg_inds_list,
-             sampling_result) = multi_apply(
-                 #super()._get_targets_single,
-                 #bbox_preds,
-                 #anchor_list,
-                 #valid_flag_list,
-                 #batch_gt_instances,
-                 #batch_img_metas,
-                 #batch_gt_instances_ignore,
-                 #unmap_outputs=unmap_outputs)
-                 super()._get_targets_single,
-                 anchor_list,
-                 valid_flag_list,
-                 num_level_anchors_list,
-                 batch_gt_instances,
-                 batch_img_metas,
-                 batch_gt_instances_ignore,
-                 unmap_outputs=unmap_outputs)
+            (all_anchors, all_labels, all_label_weights,
+             pos_inds_list, neg_inds_list, sampling_result,
+             all_bbox_targets, all_bbox_weights) = multi_apply(
+                super()._get_targets_single,
+                bbox_preds,
+                anchor_list,
+                valid_flag_list,
+                batch_gt_instances,
+                batch_img_metas,
+                batch_gt_instances_ignore,
+                unmap_outputs=unmap_outputs)
+                #super()._get_targets_single,
+                #anchor_list,
+                #valid_flag_list,
+                #num_level_anchors_list,
+                #batch_gt_instances,
+                #batch_img_metas,
+                #batch_gt_instances_ignore,
+                #unmap_outputs=unmap_outputs)
             all_assign_metrics = [
                 weight[..., 0] for weight in all_bbox_weights
             ]
