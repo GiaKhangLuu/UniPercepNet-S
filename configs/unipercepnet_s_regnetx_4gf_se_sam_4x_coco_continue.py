@@ -103,8 +103,9 @@ model = dict(
                 type='CrossEntropyLoss', use_mask=True, loss_weight=1.5))),
     train_cfg=dict(
         bbox_head=dict(
-            initial_epoch=4,
-            initial_assigner=dict(type='ATSSAssigner', topk=9),
+            initial_epoch=0,
+            initial_assigner=dict(
+                type='UniformAssigner', pos_ignore_thr=0.15, neg_ignore_thr=0.7),
             assigner=dict(type='TaskAlignedAssigner', topk=13),
             sampler=dict(
                 type='RandomSampler',
@@ -159,7 +160,9 @@ train_pipeline = [
         with_mask=True,
         poly2mask=False),
     dict(type='Resize', scale=img_scale, keep_ratio=True),
+    dict(type='YOLOXHSVRandomAug'),
     dict(type='RandomFlip', prob=0.5),
+    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
     dict(type='FilterAnnotations', min_gt_bbox_wh=(1, 1)),
     dict(type='PackDetInputs')
 ]
@@ -167,6 +170,7 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
     dict(type='Resize', scale=img_scale, keep_ratio=True),
+    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
     dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
     dict(
         type='PackDetInputs',
@@ -186,11 +190,11 @@ val_dataloader = dict(
 
 train_cfg = dict(max_epochs=max_epochs)
 
-lr = 5e-7
+lr = 1e-6
 optim_wrapper = dict(
     _delete_=True,
     type='OptimWrapper',
-    clip_grad=dict(max_norm=35, norm_type=2),
+    clip_grad=dict(max_norm=1.0, norm_type=2),
     optimizer=dict(lr=lr, type='AdamW', weight_decay=0.05))
 
 default_hooks = dict(
@@ -202,7 +206,7 @@ custom_hooks = [
         ema_type='ExpMomentumEMA',
         momentum=0.0002,
         update_buffers=True,
-        priority=49)
+        priority=49),
 ]
 
 load_from = "/home/huflit/khanglg/YOLOF-MaskV2-mmcv/work_dirs/unipercepnet_s_regnetx_4gf_se_sam_3x_coco/epoch_36.pth"
@@ -211,12 +215,11 @@ param_scheduler = [
     dict(
         type='LinearLR', start_factor=0.01, by_epoch=False, begin=0, end=250),
     dict(
-        # use cosine lr from 150 to 300 epoch
         type='CosineAnnealingLR',
-        eta_min=lr * 0.05,
-        begin=3,
+        eta_min=lr * 1e-2,
+        begin=6,
         end=max_epochs,
-        T_max=max_epochs - 3,
+        T_max=max_epochs - 6,
         by_epoch=True,
-        convert_to_iter_based=True),
+        convert_to_iter_based=False),
 ]
