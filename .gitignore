@@ -17,5 +17,7 @@ __pycache__
 *.h5    
 
 work_dirs
-datasets
+./datasets
+./datasets/bdd100k
+./datasets/coco2017
 output
