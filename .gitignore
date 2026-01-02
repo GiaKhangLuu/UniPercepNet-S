@@ -14,10 +14,14 @@ __pycache__
 *.yaml
 *.yml
 *.pickle
-*.h5    
+*.h5
+
+*.pt
 
 work_dirs
 ./datasets
 ./datasets/bdd100k
 ./datasets/coco2017
 output
+
+runs

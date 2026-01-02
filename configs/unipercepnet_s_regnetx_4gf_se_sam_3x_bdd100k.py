@@ -15,8 +15,8 @@ import sys
 UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
 sys.path.append(UNIPERCEPNET_DIR)
 
-TRAIN_BATCH_SIZE = 6
-VAL_BATCH_SIZE = 6
+TRAIN_BATCH_SIZE = 8
+VAL_BATCH_SIZE = 8
 
 img_scale = (1333, 800)
 
@@ -160,6 +160,37 @@ train_pipeline = [
         with_bbox=True,
         with_mask=True,
         poly2mask=True),
+    dict(type='CachedMosaic', img_scale=(640, 640), pad_val=114.0),
+    dict(
+        type='RandomResize',
+        scale=(1280, 1280),
+        ratio_range=(0.5, 2.0),
+        keep_ratio=True),
+    dict(
+        type='RandomCrop',
+        crop_size=img_scale,
+        recompute_bbox=True,
+        allow_negative_crop=True),
+    dict(type='YOLOXHSVRandomAug'),
+    dict(type='RandomFlip', prob=0.5),
+    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
+    dict(
+        type='CachedMixUp',
+        img_scale=img_scale,
+        ratio_range=(1.0, 1.0),
+        max_cached_images=20,
+        pad_val=(114, 114, 114)),
+    dict(type='FilterAnnotations', min_gt_bbox_wh=(1, 1)),
+    dict(type='PackDetInputs')
+]
+
+train_pipeline_stage2 = [
+    dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
+    dict(
+        type='LoadAnnotations',
+        with_bbox=True,
+        with_mask=True,
+        poly2mask=True),
     dict(type='Resize', scale=img_scale, keep_ratio=True),
     dict(type='YOLOXHSVRandomAug'),
     dict(type='RandomFlip', prob=0.5),
@@ -214,7 +245,11 @@ custom_hooks = [
         ema_type='ExpMomentumEMA',
         momentum=0.0002,
         update_buffers=True,
-        priority=49)
+        priority=49),
+    dict(
+        type='PipelineSwitchHook',
+        switch_epoch=max_epochs - stage2_num_epochs,
+        switch_pipeline=train_pipeline_stage2)
 ]
 
 param_scheduler = [
@@ -222,12 +257,10 @@ param_scheduler = [
         type='LinearLR', start_factor=0.001, by_epoch=False, begin=0, end=500),
     dict(
         type='CosineAnnealingLR',
-        eta_min=lr * 1e-3,
+        eta_min=lr * 5e-3,
         begin=20,
         end=max_epochs,
         T_max=max_epochs - 20,
         by_epoch=True,
         convert_to_iter_based=False),
 ]
-
-load_from = "/home/huflit/khanglg/YOLOF-MaskV2-mmcv/work_dirs/unipercepnet_s_regnetx_4gf_se_sam_3x_coco/epoch_36.pth"
