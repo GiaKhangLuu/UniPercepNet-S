@@ -1,12 +1,11 @@
 base_epoch = 12
-interval_of_base_epoch = 3
+interval_of_base_epoch = 1
 max_epochs= int(base_epoch * interval_of_base_epoch)
-stage2_num_epochs = 24
+stage2_num_epochs = 4
 
 _base_ = [
-    #'./_base_/datasets/coco_instance.py',
-    './_base_/datasets/coco_detection.py',
-    './_base_/schedules/schedule_3x.py', 
+    './_base_/datasets/coco_instance.py',
+    './_base_/schedules/schedule_1x.py', 
     './_base_/default_runtime.py',
 ]
 
@@ -16,8 +15,8 @@ import sys
 UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
 sys.path.append(UNIPERCEPNET_DIR)
 
-TRAIN_BATCH_SIZE = 1
-VAL_BATCH_SIZE = 1
+TRAIN_BATCH_SIZE = 8
+VAL_BATCH_SIZE = 8
 
 img_scale = (1333, 800)
 
@@ -208,6 +207,7 @@ test_pipeline = [
 train_dataloader = dict(
     batch_size=TRAIN_BATCH_SIZE,
     batch_sampler=None,
+    num_workers=10,
     dataset=dict(pipeline=train_pipeline)
 )
 val_dataloader = dict(
@@ -245,13 +245,5 @@ custom_hooks = [
 
 param_scheduler = [
     dict(
-        type='LinearLR', start_factor=0.001, by_epoch=False, begin=0, end=500),
-    dict(
-        type='CosineAnnealingLR',
-        eta_min=lr * 1e-2,
-        begin=20,
-        end=max_epochs,
-        T_max=max_epochs - 20,
-        by_epoch=True,
-        convert_to_iter_based=True),
+        type='LinearLR', start_factor=0.001, by_epoch=False, begin=0, end=500)
 ]
