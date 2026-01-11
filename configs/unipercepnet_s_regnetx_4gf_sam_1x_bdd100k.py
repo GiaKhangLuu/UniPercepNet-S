@@ -211,12 +211,12 @@ test_pipeline = [
 train_dataloader = dict(
     batch_size=TRAIN_BATCH_SIZE,
     batch_sampler=None,
-    num_workers=10,
+    num_workers=2,
     dataset=dict(pipeline=train_pipeline)
 )
 val_dataloader = dict(
     batch_size=VAL_BATCH_SIZE,
-    num_workers=10,
+    num_workers=2,
     dataset=dict(pipeline=test_pipeline)
 )
 
