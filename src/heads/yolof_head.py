@@ -82,6 +82,7 @@ class YOLOFHead(AnchorHead):
             kernel_size=3,
             stride=1,
             padding=1)
+        self.tanh = nn.Tanh()
 
     def init_weights(self) -> None:
         for m in self.modules():
@@ -378,14 +379,11 @@ class YOLOFHead(AnchorHead):
         pos_inds = sampling_result.pos_inds
         neg_inds = sampling_result.neg_inds
 
-        #print('pos_predicted_boxes', pos_predicted_boxes.shape)
-        #print('pos_target_boxes', pos_target_boxes.shape)
-        #print('bbox_targets', bbox_targets.shape)
-        #print('pos_inds', pos_inds.shape)
-
         if len(pos_inds) > 0:
-            #bbox_targets[pos_inds, :] = pos_bbox_targets
-            #bbox_weights[pos_inds, :] = 1.0
+            pos_bbox_targets = sampling_result.pos_gt_bboxes
+            bbox_targets[pos_inds, :] = pos_bbox_targets
+            bbox_weights[pos_inds, :] = 1.0
+
             labels[pos_inds] = sampling_result.pos_gt_labels
             if self.train_cfg['pos_weight'] <= 0:
                 label_weights[pos_inds] = 1.0
@@ -406,5 +404,5 @@ class YOLOFHead(AnchorHead):
             bbox_targets = unmap(bbox_targets, num_total_anchors, inside_flags)
             bbox_weights = unmap(bbox_weights, num_total_anchors, inside_flags)
 
-        return (labels, label_weights, pos_inds, neg_inds, sampling_result,
-                pos_bbox_weights, pos_predicted_boxes, pos_target_boxes)
+        return (anchors, labels, label_weights, pos_inds, neg_inds, sampling_result,
+                bbox_targets, bbox_weights)

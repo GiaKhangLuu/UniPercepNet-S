@@ -1,36 +1,47 @@
+base_epoch = 12
+interval_of_base_epoch = 1
+max_epochs= int(base_epoch * interval_of_base_epoch)
+
 _base_ = [
     './_base_/datasets/coco_instance.py',
-    './_base_/schedules/schedule_2x.py', 
+    './_base_/schedules/schedule_1x.py', 
     './_base_/default_runtime.py',
 ]
 
 import os
 import sys
 
-HOME_DIR = os.environ['HOME']
-sys.path.append(os.path.join(HOME_DIR, 'dev/YOLOF-MaskV2-mmcv'))
+UNIPERCEPNET_DIR = os.environ['UNIPERCEPNET_DIR']
+sys.path.append(UNIPERCEPNET_DIR)
+
+TRAIN_BATCH_SIZE = 6
+VAL_BATCH_SIZE = 6
+
+img_scale = (1333, 800)
 
 custom_imports = dict(
     imports=['src'],
     allow_failed_imports=False)
 
 model = dict(
-    type='src.UniPercepNetV2',
+    type='src.UniPercepNet',
     data_preprocessor=dict(
         type='DetDataPreprocessor',
         mean=[103.53, 116.28, 123.675],
         std=[57.375, 57.12, 58.395],
         bgr_to_rgb=False,
         pad_mask=True,
-        pad_size_divisor=32),
+        pad_size_divisor=32,
+        batch_augments=None),
     backbone=dict(
-        type='RegNet',
+        type='src.RegNet',
         arch='regnetx_4.0gf',
         out_indices=(3,),
         frozen_stages=-1,
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
+        se_on=True,
         init_cfg=dict(
             type='Pretrained', checkpoint='open-mmlab://regnetx_4.0gf')),
     neck=dict(
@@ -71,7 +82,7 @@ model = dict(
             activated=True,  # use probability instead of logit as input
             beta=2.0,
             loss_weight=1.0),
-        loss_bbox=dict(type='GIoULoss', loss_weight=2.0)),
+        loss_bbox=dict(type='GIoULoss', loss_weight=1.5)),
     roi_head=dict(
         type='src.StandardRoIHead',
         mask_roi_extractor=dict(
@@ -80,17 +91,21 @@ model = dict(
             out_channels=512,
             featmap_strides=[32]),
         mask_head=dict(
-            type='FCNMaskHead',
-            num_convs=6,
+            type='src.FCNMaskHead',
+            num_convs=4,
             in_channels=512,
             conv_out_channels=256,
             num_classes=80,
+            sam_on=True,
+            upsample_cfg=dict(
+                type='deconv', scale_factor=2),
             loss_mask=dict(
-                type='CrossEntropyLoss', use_mask=True, loss_weight=1.0))),
+                type='CrossEntropyLoss', use_mask=True, loss_weight=1.5))),
     train_cfg=dict(
         bbox_head=dict(
-            initial_epoch=4,
-            initial_assigner=dict(type='ATSSAssigner', topk=9),
+            initial_epoch=0,
+            initial_assigner=dict(
+                type='UniformAssigner', pos_ignore_thr=0.15, neg_ignore_thr=0.7),
             assigner=dict(type='TaskAlignedAssigner', topk=13),
             sampler=dict(
                 type='RandomSampler',
@@ -105,7 +120,7 @@ model = dict(
             debug=False),
         rpn_proposal=dict(
             nms_pre=2000,
-            max_per_img=1000,
+            max_per_img=1500,
             nms=dict(type='nms', iou_threshold=0.7),
             min_bbox_size=0),
         roi_head=dict(
@@ -128,15 +143,83 @@ model = dict(
     test_cfg=dict(
         bbox_head=dict(
             nms_pre=1000,
-            max_per_img=1000,
-            nms=dict(type='nms', iou_threshold=0.7),
+            max_per_img=100,
+            nms=dict(type='nms', iou_threshold=0.6),
             min_bbox_size=0),
         roi_head=dict(
             score_thr=0.05,
-            nms=dict(type='nms', iou_threshold=0.5),
+            nms=dict(type='nms', iou_threshold=0.6),
             max_per_img=100,
             mask_thr_binary=0.5)))
 
+train_pipeline = [
+    dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
+    dict(
+        type='LoadAnnotations',
+        with_bbox=True,
+        with_mask=True,
+        poly2mask=False),
+    dict(type='Resize', scale=img_scale, keep_ratio=True),
+    dict(type='YOLOXHSVRandomAug'),
+    dict(type='RandomFlip', prob=0.5),
+    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
+    dict(type='FilterAnnotations', min_gt_bbox_wh=(1, 1)),
+    dict(type='PackDetInputs')
+]
 
-train_dataloader = dict(batch_size=2)
-val_dataloader = dict(batch_size=4)
+test_pipeline = [
+    dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
+    dict(type='Resize', scale=img_scale, keep_ratio=True),
+    dict(type='Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
+    dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
+    dict(
+        type='PackDetInputs',
+        meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape',
+                   'scale_factor'))
+]
+
+train_dataloader = dict(
+    batch_size=TRAIN_BATCH_SIZE,
+    batch_sampler=None,
+    dataset=dict(pipeline=train_pipeline)
+)
+val_dataloader = dict(
+    batch_size=VAL_BATCH_SIZE,
+    dataset=dict(pipeline=test_pipeline)
+)
+
+train_cfg = dict(max_epochs=max_epochs)
+
+lr = 1e-6
+optim_wrapper = dict(
+    _delete_=True,
+    type='OptimWrapper',
+    clip_grad=dict(max_norm=1.0, norm_type=2),
+    optimizer=dict(lr=lr, type='AdamW', weight_decay=0.05))
+
+default_hooks = dict(
+    checkpoint=dict(interval=2, max_keep_ckpts=1, save_best='coco/segm_mAP', rule='greater'))
+
+custom_hooks = [
+    dict(
+        type='EMAHook',
+        ema_type='ExpMomentumEMA',
+        momentum=0.0002,
+        update_buffers=True,
+        priority=49),
+]
+
+load_from = "/home/huflit/khanglg/YOLOF-MaskV2-mmcv/work_dirs/unipercepnet_s_regnetx_4gf_se_sam_3x_coco/epoch_36.pth"
+
+param_scheduler = [
+    dict(
+        type='LinearLR', start_factor=0.01, by_epoch=False, begin=0, end=250),
+    dict(
+        type='CosineAnnealingLR',
+        eta_min=lr * 1e-2,
+        begin=6,
+        end=max_epochs,
+        T_max=max_epochs - 6,
+        by_epoch=True,
+        convert_to_iter_based=False),
+]

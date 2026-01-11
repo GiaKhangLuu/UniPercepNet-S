@@ -1,9 +1,10 @@
-# training schedule for 2x
+# training schedule for 3x
+
 base_epoch = 12
-interval_of_base_epoch = 2
+interval_of_base_epoch = 3
 max_epochs= int(base_epoch * interval_of_base_epoch)
 
-val_interval = 2
+val_interval = 1
 
 train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=val_interval)
 val_cfg = dict(type='ValLoop')
@@ -16,9 +17,9 @@ param_scheduler = [
     dict(
         type='MultiStepLR',
         begin=0,
-        end=24,
+        end=max_epochs,
         by_epoch=True,
-        milestones=[16, 22],
+        milestones=[24, 32],
         gamma=0.1)
 ]
 
